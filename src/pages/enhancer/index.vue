@@ -161,6 +161,7 @@ interface CostGuideLeafRow {
 
 const gearManufacture = ref(false)
 const bestManufacture = ref(false)
+const lastGearManufacture = ref(false)
 // Independent buy-price status for the two cost blocks (do NOT mutate global buyStatus)
 const gearCostBuyStatus = useMemory("enhancer-gear-cost-buy-status", PriceStatus.ASK)
 const enhancementCostBuyStatus = useMemory("enhancer-enhancement-cost-buy-status", PriceStatus.ASK)
@@ -731,6 +732,87 @@ function onProductPriceChange(value: number | undefined, oldValue: number | unde
   })
 }
 
+let _syncingGearIngredientPriceStep = false
+let _syncingGearPriceStep = false
+let _syncingEnhancementCostPriceStep = false
+let _syncingProtectionPriceStep = false
+
+function resolveTierStep(value: number | undefined, oldValue: number | undefined, marketPrice: number) {
+  if (typeof value !== "number") {
+    return undefined
+  }
+  if (value < -1) {
+    return -1
+  }
+  const isOldNumber = typeof oldValue === "number"
+  const delta = isOldNumber ? (value - oldValue) : Number.NaN
+  let high: boolean | undefined
+  let base: number | undefined
+
+  if (isOldNumber && oldValue === -1 && value === 0) {
+    return 1
+  } else if (isOldNumber && Math.abs(Math.abs(delta) - 1) < 1e-9) {
+    high = delta > 0
+    base = oldValue
+  } else if (!isOldNumber && (value === -1 || value === 0 || value === 1)) {
+    if (marketPrice > 0) {
+      high = value === 1
+      base = marketPrice
+    } else {
+      return value === 1 ? 1 : -1
+    }
+  } else {
+    return undefined
+  }
+
+  const next = priceStepOf(base, high)
+  return next > 0 ? next : -1
+}
+
+function onGearIngredientPriceChange(row: Ingredient, value: number | undefined, oldValue: number | undefined) {
+  if (_syncingGearIngredientPriceStep || row.hrid === COIN_HRID) return
+  const next = resolveTierStep(value, oldValue, row.originPrice)
+  if (next === undefined) return
+  _syncingGearIngredientPriceStep = true
+  row.price = next
+  nextTick(() => {
+    _syncingGearIngredientPriceStep = false
+  })
+}
+
+function onGearPriceChange(value: number | undefined, oldValue: number | undefined) {
+  if (_syncingGearPriceStep || !currentItem.value.hrid) return
+  const next = resolveTierStep(value, oldValue, currentItem.value.originPrice)
+  if (next === undefined) return
+  _syncingGearPriceStep = true
+  currentItem.value.price = next
+  nextTick(() => {
+    _syncingGearPriceStep = false
+  })
+}
+
+function onEnhancementCostPriceChange(row: Ingredient, value: number | undefined, oldValue: number | undefined) {
+  if (_syncingEnhancementCostPriceStep || row.hrid === COIN_HRID) return
+  const next = resolveTierStep(value, oldValue, row.originPrice)
+  if (next === undefined) return
+  _syncingEnhancementCostPriceStep = true
+  row.price = next
+  nextTick(() => {
+    _syncingEnhancementCostPriceStep = false
+  })
+}
+
+function onProtectionPriceChange(row: Item, value: number | undefined, oldValue: number | undefined) {
+  if (_syncingProtectionPriceStep || !row.protection) return
+  const next = resolveTierStep(value, oldValue, row.protection.originPrice)
+  if (next === undefined) return
+  _syncingProtectionPriceStep = true
+  row.protection.price = next
+  nextTick(() => {
+    _syncingProtectionPriceStep = false
+  })
+}
+
 function recalcManufacturePlan() {
   const hrid = currentItem.value.hrid
   if (!hrid) {
@@ -860,9 +942,10 @@ const results = computed(() => {
           ? currentItem.value.protection!.price
           : currentItem.value.protection!.originPrice) * protects
 
-    const totalCostNoHourly = matCost + (typeof currentItem.value?.price === "number"
-      ? currentItem.value!.price
-      : currentItem.value!.originPrice)
+    const gearCost = gearManufacture.value
+      ? currentItem.value!.originPrice
+      : (typeof currentItem.value?.price === "number" ? currentItem.value!.price : currentItem.value!.originPrice)
+    const totalCostNoHourly = matCost + gearCost
     let totalCost = totalCostNoHourly + (enhancerStore.hourlyRate ?? defaultConfig.hourlyRate) * (actions / calc.actionsPH)
     if (!ignoreTax) {
       totalCost *= (1 + (enhancerStore.taxRate ?? defaultConfig.taxRate) / 100)
@@ -945,20 +1028,11 @@ function resetPrice() {
   if (!currentItem.value.hrid) {
     return
   }
+  const modeChanged = lastGearManufacture.value !== gearManufacture.value
+  lastGearManufacture.value = gearManufacture.value
+
   // 触发一次computed
   currentItem.value = JSON.parse(JSON.stringify(currentItem.value))
-
-  if (!gearManufacture.value) {
-    currentItem.value.originPrice = getGearCostOriginPrice(currentItem.value.hrid!)
-  } else {
-    const val = manufactureIngredients.value
-    currentItem.value.originPrice = val.length
-      ? val.reduce((acc, item) => {
-          const price = typeof item.price === "number" ? item.price : item.originPrice
-          return acc + (price * item.count)
-        }, 0)
-      : getGearCostOriginPrice(currentItem.value.hrid!)
-  }
 
   manufactureIngredients.value.forEach((item) => {
     item.originPrice = getGearCostOriginPrice(item.hrid, item.level)
@@ -974,6 +1048,21 @@ function resetPrice() {
   protectionList.value.forEach((item) => {
     item.originPrice = getEnhancementCostOriginPrice(item.hrid, item.level)
   })
+
+  if (!gearManufacture.value) {
+    currentItem.value.originPrice = getGearCostOriginPrice(currentItem.value.hrid!)
+  } else {
+    const val = manufactureIngredients.value
+    currentItem.value.originPrice = val.length
+      ? val.reduce((acc, item) => {
+          const price = typeof item.price === "number" ? item.price : item.originPrice
+          return acc + (price * item.count)
+        }, 0)
+      : getGearCostOriginPrice(currentItem.value.hrid!)
+    if (modeChanged) {
+      currentItem.value.price = undefined
+    }
+  }
 
   // After the deep clone above, `currentItem.protection` is no longer the same object
   // as the one inside `protectionList`, so its originPrice would NOT refresh.
@@ -1100,9 +1189,19 @@ watch(menuVisible, (value) => {
                 </template>
               </el-table-column>
 
-              <el-table-column :label="t('价格')" align="center" min-width="120">
+              <el-table-column :label="t('价格')" align="center" min-width="170">
                 <template #default="{ row }">
-                  <el-input-number v-if="row.hrid !== COIN_HRID" class="max-w-100%" v-model="row.price" :placeholder="getOriginPricePlaceholder(row)" :controls="false" />
+                  <el-input-number
+                    v-if="row.hrid !== COIN_HRID"
+                    class="max-w-100%"
+                    style="width: 100%"
+                    v-model="row.price"
+                    :min="-1"
+                    :placeholder="getOriginPricePlaceholder(row)"
+                    :controls="true"
+                    controls-position="right"
+                    @change="(value, oldValue) => onGearIngredientPriceChange(row, value, oldValue)"
+                  />
                 </template>
               </el-table-column>
             </ElTable>
@@ -1137,9 +1236,19 @@ watch(menuVisible, (value) => {
               </template>
             </el-table-column>
             <el-table-column prop="count" />
-            <el-table-column min-width="120" align="center">
+            <el-table-column min-width="170" align="center">
               <template #default="{ row }">
-                <el-input-number class="max-w-100%" v-model="row.price" :placeholder="getOriginPricePlaceholder(row)" :controls="false" />
+                <el-input-number
+                  class="max-w-100%"
+                  style="width: 100%"
+                  v-model="row.price"
+                  :min="-1"
+                  :placeholder="getOriginPricePlaceholder(row)"
+                  :controls="true"
+                  controls-position="right"
+                  :disabled="gearManufacture"
+                  @change="onGearPriceChange"
+                />
               </template>
             </el-table-column>
           </ElTable>
@@ -1318,9 +1427,19 @@ watch(menuVisible, (value) => {
               </template>
             </el-table-column>
 
-            <el-table-column :label="t('价格')" align="center" min-width="120">
+            <el-table-column :label="t('价格')" align="center" min-width="170">
               <template #default="{ row }">
-                <el-input-number v-if="row.hrid !== COIN_HRID" class="max-w-100%" v-model="row.price" :placeholder="getOriginPricePlaceholder(row)" :controls="false" />
+                <el-input-number
+                  v-if="row.hrid !== COIN_HRID"
+                  class="max-w-100%"
+                  style="width: 100%"
+                  v-model="row.price"
+                  :min="-1"
+                  :placeholder="getOriginPricePlaceholder(row)"
+                  :controls="true"
+                  controls-position="right"
+                  @change="(value, oldValue) => onEnhancementCostPriceChange(row, value, oldValue)"
+                />
               </template>
             </el-table-column>
           </ElTable>
@@ -1344,9 +1463,18 @@ watch(menuVisible, (value) => {
                 </el-radio-group>
               </template>
             </el-table-column>
-            <el-table-column min-width="120" align="center">
+            <el-table-column min-width="170" align="center">
               <template #default="{ row }">
-                <el-input-number class="max-w-100%" v-model="row.protection.price" :placeholder="getOriginPricePlaceholder(row.protection)" :controls="false" />
+                <el-input-number
+                  class="max-w-100%"
+                  style="width: 100%"
+                  v-model="row.protection.price"
+                  :min="-1"
+                  :placeholder="getOriginPricePlaceholder(row.protection)"
+                  :controls="true"
+                  controls-position="right"
+                  @change="(value, oldValue) => onProtectionPriceChange(row, value, oldValue)"
+                />
               </template>
             </el-table-column>
           </ElTable>

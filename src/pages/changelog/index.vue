@@ -11,6 +11,14 @@ const appVersion = __APP_VERSION__
 // NOTE: Only user-facing feature changes are recorded here (no deploy/CI changes).
 const entries: ChangelogEntry[] = [
   {
+    version: "1.3.414",
+    date: "2026-03-02",
+    changes: [
+      "强化工具：『装备成本』『强化消耗』全部价格项补齐档位上下调整（输入框 +/- 按市场价格档位跳价）",
+      "中文翻译：更新迷宫新增物品的中文名称"
+    ]
+  },
+  {
     version: "1.3.413",
     date: "2026-02-27",
     changes: [
