@@ -9,13 +9,13 @@ const { t } = useI18n()
 const gameStore = useGameStoreOutside()
 
 // Google Apps Script 提交地址（与英灵殿相同）
-const submitUrl = "https://script.google.com/macros/s/AKfycbzKlaR9m4tic60e4Jqk5Uxf2RLwZi6Rf9f1Z4KISGYLx_byEyDO9T-BJetfH4kb3N7UJA/exec"
+const submitUrl = "https://script.google.com/macros/s/AKfycbzniWRuUF4z75GY2dSIlpE_7k9sUht4xs9NCqRRSxnb0ALRZsSZ1FTj7Rf3j2dGfH4R/exec"
 
 // 上香API地址（与英灵殿相同）
-const incenseUrl = "https://script.google.com/macros/s/AKfycbww7_AIXJ725sY0lHHVj76BOcYkDfTMZnQqdGXf1FbyrASUyk4zse2o5Dcp-pjprcjDZA/exec"
+const incenseUrl = "https://script.google.com/macros/s/AKfycbwnKgjCs6jTNt7zIaEquGiG1Le8R5aAn77Sje5qO35b7i-5du3xRs_1_uMqjmcX4gkJ/exec"
 
 // Google Sheets JSON 数据地址（与英灵殿相同）
-const jsonUrl = "https://opensheet.elk.sh/1VxVtRkvwiGEr5K7eKDwINk0Mncxn8dloffECjTQl3FQ/Sheet1"
+const jsonUrl = "https://opensheet.elk.sh/1TSfl95hekna--yFOHss23Ioapj68OVSWqkr8ifByGkc/1"
 
 // 墓碑类型定义
 interface Tombstone {
