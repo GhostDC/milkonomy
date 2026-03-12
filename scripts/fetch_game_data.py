@@ -56,7 +56,7 @@ def deploy_to_gh_pages() -> None:
             "git", "clone",
             "--branch", "gh-pages",
             "--single-branch",
-            f"https://{github_token}@github.com/{github_repository}.git",
+            f"https://x-access-token:{github_token}@github.com/{github_repository}.git",
             temp_dir
         ], check=True)
 
