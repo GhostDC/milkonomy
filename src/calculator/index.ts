@@ -6,6 +6,8 @@ import { getManualPriceOf } from "@/common/apis/price"
 import { getTrans } from "@/locales"
 import { COIN_HRID } from "@/pinia/stores/game"
 
+export const MIN_ACTION_TIME_COST = 3 * 1000000000
+
 export interface CalculatorConfig {
   hrid: string
   project?: string
@@ -233,7 +235,7 @@ export default abstract class Calculator {
   _actionsPH?: number
   get actionsPH(): number {
     if (this._actionsPH === undefined) {
-      this._actionsPH = ((60 * 60 * 1000000000) / this.timeCost) * this.efficiency
+      this._actionsPH = ((60 * 60 * 1000000000) / this.effectiveTimeCost) * this.efficiency
     }
     return this._actionsPH
   }
@@ -322,7 +324,7 @@ export default abstract class Calculator {
       profitRateFormat: Format.percent(profitRate),
       efficiencyFormat: Format.percent(this.efficiency - 1),
       speedFormat: Format.percent(this.speed - 1),
-      timeCostFormat: Format.costTime(this.timeCost),
+      timeCostFormat: Format.costTime(this.effectiveTimeCost),
       successRateFormat: Format.percent(this.successRate),
       expPH,
       expPHFormat: Format.money(expPH),
@@ -352,6 +354,10 @@ export default abstract class Calculator {
   // #region 子类override属性
 
   abstract get timeCost(): number
+
+  get effectiveTimeCost(): number {
+    return Math.max(this.timeCost, MIN_ACTION_TIME_COST)
+  }
 
   /**
    * 单次消耗的原料 + 硬币列表

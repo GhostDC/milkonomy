@@ -211,7 +211,7 @@ export class WorkflowCalculator extends Calculator {
   }
 
   get timeCost() {
-    return this.calculatorList.flat()[0].timeCost / this.workMultiplier.flat()[0]
+    return this.calculatorList.flat()[0].effectiveTimeCost / this.workMultiplier.flat()[0]
   }
 
   get calculator() {
@@ -358,7 +358,7 @@ export class WorkflowCalculator extends Calculator {
       profitPPFormat: Format.money(profitPP),
       profitRateFormat: Format.percent(profitRate),
       efficiencyFormat: Format.percent(0),
-      timeCostFormat: Format.costTime(this.timeCost),
+      timeCostFormat: Format.costTime(this.effectiveTimeCost),
       successRateFormat: Format.percent(1),
       expPHFormat: Format.money(expPH),
       cost4EnhancePHFormat: Format.money(cost4EnhancePH),
@@ -392,7 +392,7 @@ export class WorkflowCalculator extends Calculator {
       profitPDFormat: Format.money(result.profitPH * 24 * workMultiplier),
       profitRateFormat: Format.percent(result.profitRate),
       efficiencyFormat: Format.percent(cal.efficiency - 1),
-      timeCostFormat: Format.costTime(cal.timeCost),
+      timeCostFormat: Format.costTime(cal.effectiveTimeCost),
       successRateFormat: Format.percent(result.successRate),
       expPHFormat: Format.money(result.expPH * workMultiplier)
     }

@@ -11,6 +11,13 @@ const appVersion = __APP_VERSION__
 // NOTE: Only user-facing feature changes are recorded here (no deploy/CI changes).
 const entries: ChangelogEntry[] = [
   {
+    version: "1.3.437",
+    date: "2026-03-16",
+    changes: [
+      "利润计算：新增 3 秒最短行动时间限制，若动作计算耗时低于 3 秒，将按 3 秒参与每小时产量、成本、收益与利润计算"
+    ]
+  },
+  {
     version: "1.3.432",
     date: "2026-03-12",
     changes: [
