@@ -171,9 +171,6 @@ loadData()
       <p class="meta-line">
         当前维护者：<span class="maintainer">hyhfish</span> / QQ：<span class="maintainer">2978142395</span>
       </p>
-      <p class="meta-line">
-        请 <span class="maintainer">hyhfish</span> 喝杯奶茶
-      </p>
     </div>
 
     <el-row :gutter="20">
